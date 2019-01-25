@@ -47,7 +47,8 @@ export default (bc, verbose = false) => {
             return Promise.resolve();
         }
         if (type === AUTH_CHECK) {
-            const hasSessionId = _bc.brainCloudClient.isAuthenticated();
+            const hasSessionId = _bc.brainCloudClient.isAuthenticated() || window.localStorage.getItem(_bc.wrapperName +".sessionId") !== null;
+            if (verbose) console.log("===> _bc.brainCloudClient.isAuthenticated() = %s",hasSessionId);
             if (_hasLoggedin && hasSessionId) {
                 if (verbose) console.log("===> Already logged-in and authenticated");
                 return Promise.resolve()
@@ -69,7 +70,7 @@ export default (bc, verbose = false) => {
                     });
                 })
             } else {
-                if (verbose) console.log("===> No Session, just go to loing");
+                if (verbose) console.log("===> No Session, just go to loging");
                 Promise.reject();
             }
         }
