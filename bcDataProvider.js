@@ -88,18 +88,19 @@ export default (bc, verbose = false) => {
         return raEntity;
     }
 
-    function entitiesToData(result) {
+    function entitiesToData(entities,useIndexId=false) {
         var raEntities = [];
-        if (result.data.results.items) {
-            var arr = result.data.results.items
+        if (entities) {
+            var arr = entities
             raEntities = arr.map(entity => {
-                return entityToRaEntity(entity);
+                var item = entityToRaEntity(entity);
+                if (useIndexId) {
+                    item.id = item._entity.entityIndexedId;
+                }
+                return item;
             })
         }
-        return {
-            data: raEntities,
-            total: result.data.results.count
-        };
+        return raEntities;
     };
 
     function dataToEntity(data) {
@@ -132,11 +133,11 @@ export default (bc, verbose = false) => {
                             "updatedAt": -1
                         }
                     };
-                    if (verbose) console.log("==> %s: with %s" ,type,JSON.stringify(context));
+                    if (verbose) console.log("==> %s: with %s", type, JSON.stringify(context));
                     _bc.globalEntity.getPage(context, result => {
-                        if (verbose) console.log("==> %s got response with status %d",type, result.status);
+                        if (verbose) console.log("==> %s got response with status %d", type, result.status);
                         if (result.status === 200) {
-                            const data = entitiesToData(result);
+                            const data = { data:entitiesToData(result.data.results.items), total:result.data.results.count};
                             if (verbose) console.log("==> Data: ", data);
                             resolve(data);
                         } else {
@@ -148,11 +149,11 @@ export default (bc, verbose = false) => {
                         };
                     });
                 });
-                case GET_ONE:
+            case GET_ONE:
                 return new Promise(function (resolve, reject) {
                     var id = params.id;
                     _bc.globalEntity.readEntity(id, result => {
-                        if (verbose) console.log("==> %s got response for %s with status %d",type, id, result.status);
+                        if (verbose) console.log("==> %s got response for %s with status %d", type, id, result.status);
                         if (result.status === 200) {
                             const raEntity = entityToRaEntity(result.data);
                             resolve({
@@ -229,13 +230,30 @@ export default (bc, verbose = false) => {
                     });
                 });
             case GET_MANY:
-                {
-                    // const query = {
-                    //     filter: JSON.stringify({ id: params.ids }),
-                    // };
-                    // url = `${apiUrl}/${resource}?${stringify(query)}`;
-                    break;
-                }
+                return new Promise(function (resolve, reject) {
+                    var where = {
+                        "entityType": resource,
+                        "entityIndexedId" : { "$in": params.ids }
+                    };
+                    var orderBy = {"entityIndexedId": 1};
+                    var maxReturn = 50;
+
+                    if (verbose) console.log("==> %s: with %s", type, JSON.stringify(where));
+                    _bc.globalEntity.getList(where, orderBy, maxReturn, result => {
+                        if (verbose) console.log("==> %s got response with status %d", type, result.status);
+                        if (result.status === 200) {
+                            const data = {data:entitiesToData(result.data.entityList,true)};
+                            if (verbose) console.log("==> Data: ", data);
+                            resolve(data);
+                        } else {
+                            reject({
+                                STATUSCODE: result.status,
+                                status: result.status,
+                                message: result.status_message
+                            });
+                        };
+                    });
+                });
             case GET_MANY_REFERENCE:
                 {
                     // const { page, perPage } = params.pagination;
