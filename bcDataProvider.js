@@ -57,6 +57,8 @@ export default (bc, verbose = false) => {
 
     var _bc = bc;
 
+    const validEntitySortFields = ["ownerId","entityType","entityIndexedId","timeToLive","createdAt","updatedAt"];
+    
     function entityToRaEntity(entity) {
         var raEntity = entity.data || {};
         raEntity._entity = (({
@@ -110,8 +112,49 @@ export default (bc, verbose = false) => {
 
         return entity;
     }
+
+    function genSortCriteria(params) {
+        var sortField = params.sort.field;
+        
+        // id is an alias to _entity.entityId
+        if (sortField === "id") sortField = "_entity.entityId";
+        // unwrap entity fields.
+        if (sortField.startsWith("_entity")) {
+            sortField = sortField.substring(8);
+            if (!validEntitySortFields.includes(sortField)) {
+                sortField = null;
+            }
+        } else {
+            sortField = "data." + sortField;
+        }
+        var sortCriteria = {}
+        if (sortField !== null)
+            sortCriteria[sortField] = params.sort.order === "ASC" ? 1 : -1;
+        return sortCriteria;
+    }
+
+    function genFilterCriteria(params) {
+        var filterCriteria = {};
+        for (const field in params.filter) {
+            if (params.filter.hasOwnProperty(field)) {
+                const element = params.filter[field];
+                var entityField = field;
+                if (entityField === "id") entityField = "_entity.entityId";
+                if (entityField.startsWith("_entity")) {
+                    entityField = entityField.substring(8);
+                } else {
+                    entityField = "data." + entityField;
+                }
+                filterCriteria[entityField] = element;
+            }
+        }
+        return filterCriteria;
+    }
+
+
     return (type, resource, params) => {
-        if (verbose) console.log("===> DataProvider: %s", type);
+        if (verbose) console.log("===> bcDataProvider: %s", type);
+        if (verbose) console.log("===> bcDataProvider:Params %s", JSON.stringify(params));
         switch (type) {
             case GET_LIST:
                 return new Promise(function (resolve, reject) {
@@ -126,13 +169,12 @@ export default (bc, verbose = false) => {
                             "pageNumber": page
                         },
                         "searchCriteria": {
-                            "entityType": resource
+                            "entityType": resource,
+                            ...genFilterCriteria(params)
                         },
-                        "sortCriteria": {
-                            "createdAt": 1,
-                            "updatedAt": -1
-                        }
+                        "sortCriteria": genSortCriteria(params)
                     };
+                    // context.sortCriteria[params.sort.field] = params.sort.order === "ASC" ? 1 : -1;
                     if (verbose) console.log("==> %s: with %s", type, JSON.stringify(context));
                     _bc.globalEntity.getPage(context, result => {
                         if (verbose) console.log("==> %s got response with status %d", type, result.status);
