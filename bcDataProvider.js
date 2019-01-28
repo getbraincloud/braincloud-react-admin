@@ -6,6 +6,8 @@ import {
     UPDATE,
     DELETE,
     GET_MANY,
+    DELETE_MANY,
+    UPDATE_MANY,
     GET_MANY_REFERENCE,
 } from 'react-admin';
 
@@ -53,12 +55,12 @@ in brainCloud data is returned as a property of an entity object like:
  * @param {Object} payload Request parameters. Depends on the request type
  * @returns {Promise} the Promise for a data response
  */
-export default (bc, verbose = false) => {
+export default (bc, verbose = false, indexedIdResources = []) => {
 
     var _bc = bc;
 
-    const validEntitySortFields = ["ownerId","entityType","entityIndexedId","timeToLive","createdAt","updatedAt"];
-    
+    const validEntitySortFields = ["ownerId", "entityType", "entityIndexedId", "timeToLive", "createdAt", "updatedAt"];
+
     function entityToRaEntity(entity) {
         var raEntity = entity.data || {};
         raEntity._entity = (({
@@ -86,19 +88,23 @@ export default (bc, verbose = false) => {
             createAt,
             updateAt
         }))(entity);
-        raEntity.id = entity.entityId;
+        if (indexedIdResources.includes(entity.entityType)) {
+            raEntity.id = entity.entityIndexedId;
+        } else {
+            raEntity.id = entity.entityId;
+        }
         return raEntity;
     }
 
-    function entitiesToData(entities,useIndexId=false) {
+    function entitiesToData(entities, useIndexId = false) {
         var raEntities = [];
         if (entities) {
             var arr = entities
             raEntities = arr.map(entity => {
                 var item = entityToRaEntity(entity);
-                if (useIndexId) {
-                    item.id = item._entity.entityIndexedId;
-                }
+                // if (useIndexId) {
+                //     item.id = item._entity.entityIndexedId;
+                // } 
                 return item;
             })
         }
@@ -113,11 +119,12 @@ export default (bc, verbose = false) => {
         return entity;
     }
 
-    function genSortCriteria(params) {
+    function genSortCriteria(params, resource) {
         var sortField = params.sort.field;
-        
+
         // id is an alias to _entity.entityId
-        if (sortField === "id") sortField = "_entity.entityId";
+        if (sortField === "id") sortField = indexedIdResources.includes(resource) ? "_entity.entityIndexedId" : "_entity.entityId";
+
         // unwrap entity fields.
         if (sortField.startsWith("_entity")) {
             sortField = sortField.substring(8);
@@ -133,13 +140,13 @@ export default (bc, verbose = false) => {
         return sortCriteria;
     }
 
-    function genFilterCriteria(params) {
+    function genFilterCriteria(params, resource) {
         var filterCriteria = {};
         for (const field in params.filter) {
             if (params.filter.hasOwnProperty(field)) {
                 const element = params.filter[field];
                 var entityField = field;
-                if (entityField === "id") entityField = "_entity.entityId";
+                if (entityField === "id") entityField = indexedIdResources.includes(resource) ? "_entity.entityIndexedId" : "_entity.entityId";
                 if (entityField.startsWith("_entity")) {
                     entityField = entityField.substring(8);
                 } else {
@@ -170,16 +177,19 @@ export default (bc, verbose = false) => {
                         },
                         "searchCriteria": {
                             "entityType": resource,
-                            ...genFilterCriteria(params)
+                            ...genFilterCriteria(params, resource)
                         },
-                        "sortCriteria": genSortCriteria(params)
+                        "sortCriteria": genSortCriteria(params, resource)
                     };
                     // context.sortCriteria[params.sort.field] = params.sort.order === "ASC" ? 1 : -1;
                     if (verbose) console.log("==> %s: with %s", type, JSON.stringify(context));
                     _bc.globalEntity.getPage(context, result => {
                         if (verbose) console.log("==> %s got response with status %d", type, result.status);
                         if (result.status === 200) {
-                            const data = { data:entitiesToData(result.data.results.items), total:result.data.results.count};
+                            const data = {
+                                data: entitiesToData(result.data.results.items),
+                                total: result.data.results.count
+                            };
                             if (verbose) console.log("==> Data: ", data);
                             resolve(data);
                         } else {
@@ -275,16 +285,20 @@ export default (bc, verbose = false) => {
                 return new Promise(function (resolve, reject) {
                     var where = {
                         "entityType": resource,
-                        "entityIndexedId" : { "$in": params.ids }
+                        "entityIndexedId": {"$in": params.ids}
                     };
-                    var orderBy = {"entityIndexedId": 1};
-                    var maxReturn = 50;
+                    var orderBy = {
+                        "entityIndexedId": 1
+                    };
+                    var maxReturn = params.ids.length;
 
                     if (verbose) console.log("==> %s: with %s", type, JSON.stringify(where));
                     _bc.globalEntity.getList(where, orderBy, maxReturn, result => {
                         if (verbose) console.log("==> %s got response with status %d", type, result.status);
                         if (result.status === 200) {
-                            const data = {data:entitiesToData(result.data.entityList,true)};
+                            const data = {
+                                data: entitiesToData(result.data.entityList, true)
+                            };
                             if (verbose) console.log("==> Data: ", data);
                             resolve(data);
                         } else {
@@ -296,8 +310,23 @@ export default (bc, verbose = false) => {
                         };
                     });
                 });
+
+            case DELETE_MANY:
+                {
+                    //TODO: Implement DELETE_MANY
+                    /*  sample params
+                    params {"ids":["337e9e2a-2587-4a09-93a2-de8e08c999e6","9a72554c-42e3-460f-b685-2166b86a328d"]}
+                    */
+                    break;
+                }
+            case UPDATE_MANY:
+                {
+                    //TODO: Implement UPDATE_MANY
+                    break;
+                }
             case GET_MANY_REFERENCE:
                 {
+                    //TODO: Implement GET_MANY_REFERENCE
                     // const { page, perPage } = params.pagination;
                     // const { field, order } = params.sort;
                     // const query = {
