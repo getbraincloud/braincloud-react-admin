@@ -285,7 +285,9 @@ export default (bc, verbose = false, indexedIdResources = []) => {
                 return new Promise(function (resolve, reject) {
                     var where = {
                         "entityType": resource,
-                        "entityIndexedId": {"$in": params.ids}
+                        "entityIndexedId": {
+                            "$in": params.ids
+                        }
                     };
                     var orderBy = {
                         "entityIndexedId": 1
@@ -312,13 +314,25 @@ export default (bc, verbose = false, indexedIdResources = []) => {
                 });
 
             case DELETE_MANY:
-                {
-                    //TODO: Implement DELETE_MANY
-                    /*  sample params
-                    params {"ids":["337e9e2a-2587-4a09-93a2-de8e08c999e6","9a72554c-42e3-460f-b685-2166b86a328d"]}
-                    */
-                    break;
-                }
+                return Promise.all(params.ids.map(id => {
+                    // This will not work on entityIndexdedId items.
+                    if (indexedIdResources.includes(resource)) return Promise.reject();
+                    return new Promise(function (resolve, reject) {
+                        _bc.globalEntity.deleteEntity(id, -1, result => {
+                            if (result.status === 200) {
+                                resolve();
+                            } else {
+                                reject({
+                                    STATUSCODE: result.status,
+                                    status: result.status,
+                                    message: result.status_message
+                                });
+                            };
+                        });
+                    });
+                })).then( data => {                    
+                    return { data: params.ids };
+                });
             case UPDATE_MANY:
                 {
                     //TODO: Implement UPDATE_MANY
