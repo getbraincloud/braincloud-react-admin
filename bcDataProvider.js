@@ -203,22 +203,47 @@ export default (bc, verbose = false, indexedIdResources = []) => {
                 });
             case GET_ONE:
                 return new Promise(function (resolve, reject) {
-                    var id = params.id;
-                    _bc.globalEntity.readEntity(id, result => {
-                        if (verbose) console.log("==> %s got response for %s with status %d", type, id, result.status);
-                        if (result.status === 200) {
-                            const raEntity = entityToRaEntity(result.data);
-                            resolve({
-                                data: raEntity
-                            });
-                        } else {
-                            reject({
-                                STATUSCODE: result.status,
-                                status: result.status,
-                                message: result.status_message
-                            });
-                        };
-                    });
+                    // TODO: Once brainCloud accept filter/sort on entityId this can be updated to only use the getList api.
+                    if (indexedIdResources.includes(resource)) {
+                        const id = params.id;
+                        var where = {"entityType": resource, "entityIndexedId": id};
+                        _bc.globalEntity.getList(where, {}, 1, result => {
+                            if (verbose) console.log("==> %s got response for %s with status %d", type, id, result.status);
+                            if (result.status === 200) {
+                                if (result.data.entityList && result.data.entityList.length > 0) {
+                                    const raEntity = entityToRaEntity(result.data.entityList[0]);
+                                    resolve({
+                                        data: raEntity
+                                    });
+                                } else {
+                                    resolve( { data: {}});
+                                }
+                            } else {
+                                reject({
+                                    STATUSCODE: result.status,
+                                    status: result.status,
+                                    message: result.status_message
+                                });
+                            };
+                        });
+                    } else {
+                        const id = params.id;
+                        _bc.globalEntity.readEntity(id, result => {
+                            if (verbose) console.log("==> %s got response for %s with status %d", type, id, result.status);
+                            if (result.status === 200) {
+                                const raEntity = entityToRaEntity(result.data);
+                                resolve({
+                                    data: raEntity
+                                });
+                            } else {
+                                reject({
+                                    STATUSCODE: result.status,
+                                    status: result.status,
+                                    message: result.status_message
+                                });
+                            };
+                        });
+                    }
                 });
             case CREATE:
                 return new Promise(function (resolve, reject) {
@@ -245,7 +270,7 @@ export default (bc, verbose = false, indexedIdResources = []) => {
                 });
             case UPDATE:
                 return new Promise(function (resolve, reject) {
-                    var id = params.id;
+                    var id = params.data._entity.entityId;
                     var data = params.data;
                     var entity = dataToEntity(data);
                     _bc.globalEntity.updateEntity(id, entity.version, entity.data, result => {
@@ -266,7 +291,7 @@ export default (bc, verbose = false, indexedIdResources = []) => {
                 });
             case DELETE:
                 return new Promise(function (resolve, reject) {
-                    var id = params.id;
+                    var id = params.data._entity.entityId;
                     var data = params.data;
                     var entity = dataToEntity(data);
                     _bc.globalEntity.deleteEntity(id, entity.version, result => {
