@@ -55,7 +55,7 @@ in brainCloud data is returned as a property of an entity object like:
  * @param {Object} payload Request parameters. Depends on the request type
  * @returns {Promise} the Promise for a data response
  */
-export default (bc, verbose = false, indexedIdResources = []) => {
+export default (bc, indexedIdResources = [], verbose = false) => {
 
     var _bc = bc;
 
