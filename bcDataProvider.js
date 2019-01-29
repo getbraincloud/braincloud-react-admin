@@ -341,7 +341,11 @@ export default (bc, verbose = false, indexedIdResources = []) => {
             case DELETE_MANY:
                 return Promise.all(params.ids.map(id => {
                     // This will not work on entityIndexdedId items.
-                    if (indexedIdResources.includes(resource)) return Promise.reject();
+                    if (indexedIdResources.includes(resource)) return Promise.reject({
+                        STATUSCODE: 500,
+                        status: 500,
+                        message: "Cannot delete resources using entityIndexedId"
+                    });
                     return new Promise(function (resolve, reject) {
                         _bc.globalEntity.deleteEntity(id, -1, result => {
                             if (result.status === 200) {
@@ -359,12 +363,14 @@ export default (bc, verbose = false, indexedIdResources = []) => {
                     return { data: params.ids };
                 });
             case UPDATE_MANY:
-                {
+                {                    
+                    if (verbose) console.log("!!> %s: NOT YET SUPPORTED params: %s ", type, JSON.stringify(parms));
                     //TODO: Implement UPDATE_MANY
                     break;
                 }
             case GET_MANY_REFERENCE:
                 {
+                    if (verbose) console.log("!!> %s: NOT YET SUPPORTED params: %s ", type, JSON.stringify(parms));
                     //TODO: Implement GET_MANY_REFERENCE
                     // const { page, perPage } = params.pagination;
                     // const { field, order } = params.sort;
