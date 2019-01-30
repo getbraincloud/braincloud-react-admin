@@ -225,22 +225,40 @@ export default (bc, indexedIdResources = [], verbose = false) => {
                     const jsonEntityAcl = {
                         "other": 1
                     };
-                    const entityData = params.data;
-                    _bc.globalEntity.createEntity(resource, timeToLive, jsonEntityAcl, entityData, result => {
-                        if (result.status === 200) {
-                            const raEntity = entityToRaEntity(result.data);
-                            resolve({
-                                data: raEntity
-                            });
-                        } else {
-                            reject({
-                                STATUSCODE: result.status,
-                                status: result.status,
-                                message: result.status_message
-                            });
-                        }
-                    })
-
+                    if (indexedIdResources.includes(resource)) {
+                        var indexedId = params.data.id;
+                        const {id,...entityData} = params.data;                        
+                        _bc.globalEntity.createEntityWithIndexedId(resource, indexedId, timeToLive, jsonEntityAcl, entityData, result => {
+                            if (result.status === 200) {
+                                const raEntity = entityToRaEntity(result.data);
+                                resolve({
+                                    data: raEntity
+                                });
+                            } else {
+                                reject({
+                                    STATUSCODE: result.status,
+                                    status: result.status,
+                                    message: result.status_message
+                                });
+                            }
+                        })
+                    } else {
+                        const entityData = params.data;
+                        _bc.globalEntity.createEntity(resource, timeToLive, jsonEntityAcl, entityData, result => {
+                            if (result.status === 200) {
+                                const raEntity = entityToRaEntity(result.data);
+                                resolve({
+                                    data: raEntity
+                                });
+                            } else {
+                                reject({
+                                    STATUSCODE: result.status,
+                                    status: result.status,
+                                    message: result.status_message
+                                });
+                            }
+                        })
+                    }
                 });
             case UPDATE:
                 return new Promise(function (resolve, reject) {
@@ -338,13 +356,13 @@ export default (bc, indexedIdResources = [], verbose = false) => {
                 });
             case UPDATE_MANY:
                 {                    
-                    if (verbose) console.log("!!> %s: NOT YET SUPPORTED params: %s ", type, JSON.stringify(parms));
+                    if (verbose) console.log("!!> %s: NOT YET SUPPORTED params: %s ", type, JSON.stringify(params));
                     //TODO: Implement UPDATE_MANY
                     break;
                 }
             case GET_MANY_REFERENCE:
                 {
-                    if (verbose) console.log("!!> %s: NOT YET SUPPORTED params: %s ", type, JSON.stringify(parms));
+                    if (verbose) console.log("!!> %s: NOT YET SUPPORTED params: %s ", type, JSON.stringify(params));
                     //TODO: Implement GET_MANY_REFERENCE
                     // const { page, perPage } = params.pagination;
                     // const { field, order } = params.sort;
@@ -362,6 +380,9 @@ export default (bc, indexedIdResources = [], verbose = false) => {
                     // url = `${apiUrl}/${resource}?${stringify(query)}`;
                     break;
                 }
+            // case AUTH_GET_PERMISSIONS:
+            //     if (verbose) console.log("!!> %s: NOT YET SUPPORTED params: %s ", type, JSON.stringify(params));
+            //     break;
             default:
                 throw new Error(`Unsupported Data Provider request type ${type}`);
         }
