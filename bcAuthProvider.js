@@ -6,10 +6,33 @@ import {
     AUTH_GET_PERMISSIONS
 } from 'react-admin';
 
-export default (bc, verbose = false) => {
+export default (bc, roleAttribute = "react-admin-access", verbose = false) => {
 
     var _bc = bc;
     var _hasLoggedin = false;
+    var _currentProfile = {};
+    var _currentPermission = null;
+    var _roleAttribute = roleAttribute || "react-admin-access";
+
+    function validateLogin(result, resolve, reject) {
+        if (verbose) console.log("---> Loged-in to braincloud ", result);
+        if (result.status === 200) {
+            _hasLoggedin = true;
+            if (verbose) console.log("---> User Language code is %s", result.data.languageCode);
+            _currentProfile = result.data;
+            _bc.playerState.getAttributes(result => {
+                var status = result.status;
+                if (status === 200) {
+                    _currentPermission = result.data.attributes[_roleAttribute];
+                    localStorage.setItem(_bc.wrapperName+".permission",_currentPermission);
+                }
+                if (verbose) console.log("---> User permission from %s is %s",_roleAttribute, _currentPermission);                
+                resolve()
+            });
+        } else {
+            reject("Error" + result.status);
+        }
+    }
 
     return (type, params) => {
         if (verbose) console.log("---> bcAuthProvider: %s", type);
@@ -22,14 +45,7 @@ export default (bc, verbose = false) => {
             if (verbose) console.log("---> Login", params);
             return new Promise(function (resolve, reject) {
                 _bc.authenticateEmailPassword(username, password, false, result => {
-                    if (verbose) console.log("---> Loged-in to braincloud ", result);
-                    if (result.status === 200) {
-                        _hasLoggedin = true;
-                        if (verbose) console.log("---> User Language code is %s", result.data.languageCode);
-                        resolve();
-                    } else {
-                        reject("Error" + result.status);
-                    }
+                    validateLogin(result,resolve,reject);
                 });
             });
         }
@@ -57,17 +73,8 @@ export default (bc, verbose = false) => {
             if (hasSessionId) {
                 return new Promise(function (resolve, reject) {
                     if (verbose) console.log("---> Attempting to restoring Session...");
-                    _bc.restoreSession(r => {
-                        if (r.status === 200) {
-                            if (verbose) console.log("---> Session restored", r);
-                            _hasLoggedin = true;
-                            resolve()
-                            return;
-                        }
-                        _hasLoggedin = false;
-                        if (verbose) console.log("---> Session expired", r);
-                        reject();
-                        return
+                    _bc.restoreSession(result => {
+                        validateLogin(result,resolve,reject);
                     });
                 })
             } else {
@@ -76,8 +83,9 @@ export default (bc, verbose = false) => {
             }
         }
         if (type === AUTH_GET_PERMISSIONS) {
-            // if (verbose) console.log("-!-> %s: NOT YET SUPPORTED params: %s ", type, JSON.stringify(params));
-            return Promise.resolve();
+            _currentPermission = localStorage.getItem(_bc.wrapperName+".permission");
+            if (verbose) console.log("---> Getting permission %s",_currentPermission);
+            return Promise.resolve(_currentPermission);
         }
 
         if (verbose) console.warn("---> Unknown type %s", type);
