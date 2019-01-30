@@ -1,7 +1,7 @@
 {
   "name": "braincloud-react-admin",
   "version": "1.0.0",
-  "description": "Data Provider for react-admin framework. Allow access to Global Entities, and ",
+  "description": "Data Provider for react-admin framework. Allow access to Global Entitie",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -12,13 +12,15 @@
   ],
   "author": "Mario Couture",
   "license": "ISC",
+  "bundleDependencies": false,
   "dependencies": {
+    "braincloud": "^3.10.0",
     "react": "^16.7.0",
     "react-admin": "^2.6.2",
     "react-dom": "^16.7.0"
   },
   "repository": {
-    "type":"git",
-    "url": "git@github.com:marioc-bitheads/braincloud-react-admin.git"
+    "type": "git",
+    "url": "https://github.com/getbraincloud/braincloud-react-admin.git"
   }
 }
