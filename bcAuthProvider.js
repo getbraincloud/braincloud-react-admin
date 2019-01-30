@@ -6,13 +6,13 @@ import {
     AUTH_GET_PERMISSIONS
 } from 'react-admin';
 
-export default (bc, roleAttribute = "react-admin-access", verbose = false) => {
+export default (bc, roleAttribute = "react-admin-role", verbose = false) => {
 
     var _bc = bc;
     var _hasLoggedin = false;
     var _currentProfile = {};
     var _currentPermission = null;
-    var _roleAttribute = roleAttribute || "react-admin-access";
+    var _roleAttribute = roleAttribute || "react-admin-role";
 
     function validateLogin(result, resolve, reject) {
         if (verbose) console.log("---> Loged-in to braincloud ", result);
