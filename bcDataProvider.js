@@ -62,32 +62,9 @@ export default (bc, indexedIdResources = [], verbose = false) => {
     const validEntitySortFields = ["ownerId", "entityType", "entityIndexedId", "timeToLive", "createdAt", "updatedAt"];
 
     function entityToRaEntity(entity) {
-        var raEntity = entity.data || {};
-        raEntity._entity = (({
-            gameId,
-            entityId,
-            ownerId,
-            entityType,
-            entityIndexedId,
-            version,
-            acl,
-            expiresAt,
-            timeToLive,
-            createAt,
-            updateAt
-        }) => ({
-            gameId,
-            entityId,
-            ownerId,
-            entityType,
-            entityIndexedId,
-            version,
-            acl,
-            expiresAt,
-            timeToLive,
-            createAt,
-            updateAt
-        }))(entity);
+        var { data, ..._entity } = entity;
+        var raEntity = {_entity:_entity,...data};
+
         if (indexedIdResources.includes(entity.entityType)) {
             raEntity.id = entity.entityIndexedId;
         } else {
