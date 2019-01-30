@@ -79,9 +79,6 @@ export default (bc, indexedIdResources = [], verbose = false) => {
             var arr = entities
             raEntities = arr.map(entity => {
                 var item = entityToRaEntity(entity);
-                // if (useIndexId) {
-                //     item.id = item._entity.entityIndexedId;
-                // } 
                 return item;
             })
         }
