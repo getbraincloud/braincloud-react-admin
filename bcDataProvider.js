@@ -132,6 +132,20 @@ export default (bc, indexedIdResources = [], verbose = false) => {
         return filterCriteria;
     }
 
+    function processCreateReply(result, resolve, reject ) {
+        if (result.status === 200) {
+            const raEntity = entityToRaEntity(result.data);
+            resolve({
+                data: raEntity
+            });
+        } else {
+            reject({
+                STATUSCODE: result.status,
+                status: result.status,
+                message: result.status_message
+            });
+        }
+    }
 
     return (type, resource, params) => {
         if (verbose) console.log("===> bcDataProvider: %s", type);
@@ -221,42 +235,20 @@ export default (bc, indexedIdResources = [], verbose = false) => {
                 });
             case CREATE:
                 return new Promise(function (resolve, reject) {
-                    const timeToLive = -1;
-                    const jsonEntityAcl = {
-                        "other": 1
-                    };
+                    const {id,_entity,...entityData} = params.data;
+                    const timeToLive = _entity ? _entity.timeToLive || -1 : -1 ;
+                    const jsonEntityAcl = _entity ? _entity.acl || {"other": 1} : {"other": 1};
                     if (indexedIdResources.includes(resource)) {
-                        var indexedId = params.data.id;
-                        const {id,...entityData} = params.data;                        
-                        _bc.globalEntity.createEntityWithIndexedId(resource, indexedId, timeToLive, jsonEntityAcl, entityData, result => {
-                            if (result.status === 200) {
-                                const raEntity = entityToRaEntity(result.data);
-                                resolve({
-                                    data: raEntity
-                                });
-                            } else {
-                                reject({
-                                    STATUSCODE: result.status,
-                                    status: result.status,
-                                    message: result.status_message
-                                });
-                            }
+                        _bc.globalEntity.createEntityWithIndexedId(resource, id, timeToLive, jsonEntityAcl, entityData, result => {
+                            processCreateReply(result, resolve, reject);
+                        })
+                    } else if (params.data.hasOwnProperty("_entity") && params.data._entity.hasOwnProperty("entityIndexedId")) {
+                        _bc.globalEntity.createEntityWithIndexedId(resource, _entity.entityIndexedId, timeToLive, jsonEntityAcl, entityData, result => {
+                            processCreateReply(result, resolve, reject);
                         })
                     } else {
-                        const entityData = params.data;
                         _bc.globalEntity.createEntity(resource, timeToLive, jsonEntityAcl, entityData, result => {
-                            if (result.status === 200) {
-                                const raEntity = entityToRaEntity(result.data);
-                                resolve({
-                                    data: raEntity
-                                });
-                            } else {
-                                reject({
-                                    STATUSCODE: result.status,
-                                    status: result.status,
-                                    message: result.status_message
-                                });
-                            }
+                            processCreateReply(result, resolve, reject);
                         })
                     }
                 });
@@ -380,9 +372,6 @@ export default (bc, indexedIdResources = [], verbose = false) => {
                     // url = `${apiUrl}/${resource}?${stringify(query)}`;
                     break;
                 }
-            // case AUTH_GET_PERMISSIONS:
-            //     if (verbose) console.log("!!> %s: NOT YET SUPPORTED params: %s ", type, JSON.stringify(params));
-            //     break;
             default:
                 throw new Error(`Unsupported Data Provider request type ${type}`);
         }
