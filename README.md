@@ -48,10 +48,11 @@ By default any defined resources are assumed to be global entities. Optionally y
 ### User Entities
 
 To make as resourse use user's entities add the suffix `@user` to the resource name. For example;
+
 ``` javascript
-...
+
 <Resource name="Note@user" options={{ label: 'Notes' }} list={NoteList} show={NoteShow} edit={NoteEdit}/>
-...
+
 ```
 
 It is recommented to add the `options` proprerty with a label to the definition, else the `@user` suffix will show in the menu.
@@ -61,10 +62,11 @@ It is recommented to add the `options` proprerty with a label to the definition,
 To use custom permissions you must add the key used to define the permission to the `bcAuthProvider` call.
 
 ``` javascript
+
 const authProvider = bcReactAdmin.bcAuthProvider(_bc,"react-admin-role",verboseMode);
 ```
 
-Then add an attribute of the same name to each user and set the value to the chosen role for that user.
+Then in brainCloud add a user attribute of the same name (`react-admin-role` in this example) to each user and set the value to the chosen role for that user.
 See React-Admin documentation at https://marmelab.com/react-admin/Authorization.html
 
 ## Usage
