@@ -18,6 +18,16 @@ Information about react-admin can be found at:
 
 http://marmelab.com/react-admin/
 
+### Requirements
+
+You must have React-Admin installed to use this dataProvider
+
+``` shell
+create-react-app test-admin
+cd test-admin/
+yarn add react-admin braincloud-react-admin prop-types
+yarn start
+```
 
 ## Install
 
@@ -25,10 +35,43 @@ http://marmelab.com/react-admin/
 npm install braincloud-react-admin
 ```
 
+## Features
+
+- Global Entities
+- User Entities 
+- Custom Permissions
+
+### Global Entities
+
+By default any defined resources are assumed to be global entities. Optionally you can defined the resource name with the suffix `@global`.
+
+### User Entities
+
+To make as resourse use user's entities add the suffix `@user` to the resource name. For example;
+``` javascript
+...
+<Resource name="Note@user" options={{ label: 'Notes' }} list={NoteList} show={NoteShow} edit={NoteEdit}/>
+...
+```
+
+It is recommented to add the `options` proprerty with a label to the definition, else the `@user` suffix will show in the menu.
+
+### Custom Permission
+
+To use custom permissions you must add the key used to define the permission to the `bcAuthProvider` call.
+
+``` javascript
+const authProvider = bcReactAdmin.bcAuthProvider(_bc,"react-admin-role",verboseMode);
+```
+
+Then add an attribute of the same name to each user and set the value to the chosen role for that user.
+See React-Admin documentation at https://marmelab.com/react-admin/Authorization.html
+
 ## Usage
 
 App.js
-``` typescript
+
+``` javascript
 import React from 'react';
 import { Admin, Resource } from 'react-admin';
 
@@ -44,7 +87,7 @@ _bc.initialize("99999","aaaaaaaa-bbbb-cccc-0000-111111111111","0.1");  // Provid
 
 const resourcesUsingIndexedIdAsKey = ["Client"];
 const verboseMode = false;
-const authProvider = bcReactAdmin.bcAuthProvider(_bc,verboseMode);
+const authProvider = bcReactAdmin.bcAuthProvider(_bc,"react-admin-role",verboseMode);
 const dataProvider = bcReactAdmin.bcDataProvider(_bc,resourcesUsingIndexedIdAsKey,verboseMode);
 
 
@@ -61,7 +104,8 @@ export default App;
 ```
 
 Client.js
-``` typescript
+
+``` javascript
 import React from 'react';
 import {List,Datagrid,Show,SimpleShowLayout,TextField,Create,Edit,SimpleForm,DisabledInput,TextInput,ShowButton} from 'react-admin';
 

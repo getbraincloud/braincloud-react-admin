@@ -61,9 +61,24 @@ export default (bc, indexedIdResources = [], verbose = false) => {
 
     const validEntitySortFields = ["ownerId", "entityType", "entityIndexedId", "timeToLive", "createdAt", "updatedAt"];
 
+    const globalService = {
+        ..._bc.globalEntity,
+        create: (type, ttl, acl, data, completion) => { _bc.globalEntity.createEntity(type, ttl, acl, data, completion) },
+        update: (id, type, data, acl, version, completion) => { _bc.globalEntity.updateEntity(id, version, data, completion) },
+        read: (id, completion) => { _bc.globalEntity.readEntity(id, completion) }
+    };
+    const userService = {
+        ..._bc.entity,
+        create: (type, ttl, acl, data, completion) => { _bc.entity.createEntity(type, data, acl, completion) },
+        update: (id, type, data, acl, version, completion) => { _bc.entity.updateEntity(id, type, data, acl, version, completion) },
+        read: (id, completion) => { _bc.entity.getEntity(id, completion) },
+        createEntityWithIndexedId: (resource, indexedId, ttl, acl, data, completion) => { _bc.entity.createEntity(type, data, acl, completion) }
+    };
+
+    // entity Marshaling 
     function entityToRaEntity(entity) {
         var { data, ..._entity } = entity;
-        var raEntity = {_entity:_entity,...data};
+        var raEntity = { _entity: _entity, ...data };
 
         if (indexedIdResources.includes(entity.entityType)) {
             raEntity.id = entity.entityIndexedId;
@@ -132,7 +147,7 @@ export default (bc, indexedIdResources = [], verbose = false) => {
         return filterCriteria;
     }
 
-    function processCreateReply(result, resolve, reject ) {
+    function processCreateReply(result, resolve, reject) {
         if (result.status === 200) {
             const raEntity = entityToRaEntity(result.data);
             resolve({
@@ -147,8 +162,31 @@ export default (bc, indexedIdResources = [], verbose = false) => {
         }
     }
 
+    function updateTTL(entity) {
+        return new Promise(function (resolve, reject) {
+            _bc.globalEntity.updateEntityTimeToLive(entity.entityId, entity.version, entity.timeToLive, result => {
+                var status = result.status;
+                console.log(status + " : " + JSON.stringify(result, null, 2));
+            });
+        });
+    }
+
+
     return (type, resource, params) => {
-        if (verbose) console.log("===> bcDataProvider: %s", type);
+        var mode = 'global';
+        var service = globalService;
+        
+        if (resource.endsWith('@user')) {
+            mode = 'user';
+            resource = resource.substring(0,resource.lastIndexOf('@') );
+            service = userService;
+        }
+        if (resource.endsWith('@global')) {
+            mode = 'global';
+            resource = resource.substring(0,resource.lastIndexOf('@') );
+            service = globalService;
+        }
+        if (verbose) console.log("===> bcDataProvider: %s for %s", type, resource);
         if (verbose) console.log("===> bcDataProvider:Params %s", JSON.stringify(params));
         switch (type) {
             case GET_LIST:
@@ -158,6 +196,10 @@ export default (bc, indexedIdResources = [], verbose = false) => {
                         perPage
                     } = params.pagination;
                     // TODO: Support for paging, and Sorting.
+                    console.log("%%%%%%%%%%%%%%%%%%%");
+                    console.log("for " + resource);
+                    console.log(params);
+                    console.log("%%%%%%%%%%%%%%%%%%%");
                     var context = {
                         "pagination": {
                             "rowsPerPage": perPage,
@@ -171,7 +213,7 @@ export default (bc, indexedIdResources = [], verbose = false) => {
                     };
                     // context.sortCriteria[params.sort.field] = params.sort.order === "ASC" ? 1 : -1;
                     if (verbose) console.log("==> %s: with %s", type, JSON.stringify(context));
-                    _bc.globalEntity.getPage(context, result => {
+                    service.getPage(context, result => {
                         if (verbose) console.log("==> %s got response with status %d", type, result.status);
                         if (result.status === 200) {
                             const data = {
@@ -194,8 +236,8 @@ export default (bc, indexedIdResources = [], verbose = false) => {
                     // TODO: Once brainCloud accept filter/sort on entityId this can be updated to only use the getList api.
                     if (indexedIdResources.includes(resource)) {
                         const id = params.id;
-                        var where = {"entityType": resource, "entityIndexedId": id};
-                        _bc.globalEntity.getList(where, {}, 1, result => {
+                        var where = { "entityType": resource, "entityIndexedId": id };
+                        service.getList(where, {}, 1, result => {
                             if (verbose) console.log("==> %s got response for %s with status %d", type, id, result.status);
                             if (result.status === 200) {
                                 if (result.data.entityList && result.data.entityList.length > 0) {
@@ -204,7 +246,7 @@ export default (bc, indexedIdResources = [], verbose = false) => {
                                         data: raEntity
                                     });
                                 } else {
-                                    resolve( { data: {}});
+                                    resolve({ data: {} });
                                 }
                             } else {
                                 reject({
@@ -216,7 +258,7 @@ export default (bc, indexedIdResources = [], verbose = false) => {
                         });
                     } else {
                         const id = params.id;
-                        _bc.globalEntity.readEntity(id, result => {
+                        service.read(id, result => {
                             if (verbose) console.log("==> %s got response for %s with status %d", type, id, result.status);
                             if (result.status === 200) {
                                 const raEntity = entityToRaEntity(result.data);
@@ -235,19 +277,19 @@ export default (bc, indexedIdResources = [], verbose = false) => {
                 });
             case CREATE:
                 return new Promise(function (resolve, reject) {
-                    const {id,_entity,...entityData} = params.data;
-                    const timeToLive = _entity ? _entity.timeToLive || -1 : -1 ;
-                    const jsonEntityAcl = _entity ? _entity.acl || {"other": 1} : {"other": 1};
+                    const { id, _entity, ...entityData } = params.data;
+                    const timeToLive = _entity ? _entity.timeToLive || -1 : -1;
+                    const jsonEntityAcl = _entity ? _entity.acl || { "other": 1 } : { "other": 1 };
                     if (indexedIdResources.includes(resource)) {
-                        _bc.globalEntity.createEntityWithIndexedId(resource, id, timeToLive, jsonEntityAcl, entityData, result => {
+                        service.createEntityWithIndexedId(resource, id, timeToLive, jsonEntityAcl, entityData, result => {
                             processCreateReply(result, resolve, reject);
                         })
                     } else if (params.data.hasOwnProperty("_entity") && params.data._entity.hasOwnProperty("entityIndexedId")) {
-                        _bc.globalEntity.createEntityWithIndexedId(resource, _entity.entityIndexedId, timeToLive, jsonEntityAcl, entityData, result => {
+                        service.createEntityWithIndexedId(resource, _entity.entityIndexedId, timeToLive, jsonEntityAcl, entityData, result => {
                             processCreateReply(result, resolve, reject);
                         })
                     } else {
-                        _bc.globalEntity.createEntity(resource, timeToLive, jsonEntityAcl, entityData, result => {
+                        service.create(resource, timeToLive, jsonEntityAcl, entityData, result => {
                             processCreateReply(result, resolve, reject);
                         })
                     }
@@ -257,7 +299,10 @@ export default (bc, indexedIdResources = [], verbose = false) => {
                     var id = params.data._entity.entityId;
                     var data = params.data;
                     var entity = dataToEntity(data);
-                    _bc.globalEntity.updateEntity(id, entity.version, entity.data, result => {
+                    var updatedTTL = entity.timeToLive !== params.previousData._entity.timeToLive;
+                    var udpatedACL = entity.acl !== params.previousData._entity.acl;
+                    var udpatedOwner = entity.ownerId !== params.previousData._entity.ownerId;
+                    service.update(id, entity.entityType, entity.data, entity.acl, entity.version, result => {
                         if (result.status === 200) {
                             var newData = entity.data; // 
                             newData._entity = result.data;
@@ -275,12 +320,12 @@ export default (bc, indexedIdResources = [], verbose = false) => {
                 });
             case DELETE:
                 return new Promise(function (resolve, reject) {
-                    var id = params.data._entity.entityId;
-                    var data = params.data;
+                    var id = params.id;
+                    var data = params.previousData;
                     var entity = dataToEntity(data);
-                    _bc.globalEntity.deleteEntity(id, entity.version, result => {
+                    service.deleteEntity(id, entity.version, result => {
                         if (result.status === 200) {
-                            resolve();
+                            resolve({data});
                         } else {
                             reject({
                                 STATUSCODE: result.status,
@@ -304,7 +349,7 @@ export default (bc, indexedIdResources = [], verbose = false) => {
                     var maxReturn = params.ids.length;
 
                     if (verbose) console.log("==> %s: with %s", type, JSON.stringify(where));
-                    _bc.globalEntity.getList(where, orderBy, maxReturn, result => {
+                    service.getList(where, orderBy, maxReturn, result => {
                         if (verbose) console.log("==> %s got response with status %d", type, result.status);
                         if (result.status === 200) {
                             const data = {
@@ -331,7 +376,7 @@ export default (bc, indexedIdResources = [], verbose = false) => {
                         message: "Cannot delete resources using entityIndexedId"
                     });
                     return new Promise(function (resolve, reject) {
-                        _bc.globalEntity.deleteEntity(id, -1, result => {
+                        service.deleteEntity(id, -1, result => {
                             if (result.status === 200) {
                                 resolve();
                             } else {
@@ -343,11 +388,11 @@ export default (bc, indexedIdResources = [], verbose = false) => {
                             };
                         });
                     });
-                })).then( data => {                    
+                })).then(data => {
                     return { data: params.ids };
                 });
             case UPDATE_MANY:
-                {                    
+                {
                     if (verbose) console.log("!!> %s: NOT YET SUPPORTED params: %s ", type, JSON.stringify(params));
                     //TODO: Implement UPDATE_MANY
                     break;

@@ -12,8 +12,8 @@ export default (bc, roleAttribute = "react-admin-role", verbose = false) => {
     var _hasLoggedin = false;
     var _currentProfile = {};
     var _currentPermission = null;
-    var _roleAttribute = roleAttribute || "react-admin-role";
-
+    var _roleAttribute = roleAttribute; 
+    
     function validateLogin(result, resolve, reject) {
         if (verbose) console.log("---> Loged-in to braincloud ", result);
         if (result.status === 200) {
