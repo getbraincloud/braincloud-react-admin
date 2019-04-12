@@ -75,6 +75,7 @@ export default (bc, indexedIdResources = [], verbose = false) => {
         createEntityWithIndexedId: (resource, indexedId, ttl, acl, data, completion) => { _bc.entity.createEntity(type, data, acl, completion) }
     };
 
+
     // entity Marshaling 
     function entityToRaEntity(entity) {
         var { data, ..._entity } = entity;
@@ -129,24 +130,38 @@ export default (bc, indexedIdResources = [], verbose = false) => {
         return sortCriteria;
     }
 
-    function genFilterCriteria(params, resource) {
+    function genFilterCriteria(filter, resource) {
         var filterCriteria = {};
-        for (const field in params.filter) {
-            if (params.filter.hasOwnProperty(field)) {
-                const element = params.filter[field];
+        for (var field in filter) {
+
+            if (filter.hasOwnProperty(field)) {
+                var element = filter[field];
                 var entityField = field;
                 if (entityField === "id") entityField = indexedIdResources.includes(resource) ? "_entity.entityIndexedId" : "_entity.entityId";
+
                 if (entityField.startsWith("_entity")) {
                     entityField = entityField.substring(8);
+                } else if (entityField.startsWith("$")) {// this is a mongo query string.
+                    // Process it's childs recursively
+                    if (typeof element === 'object') {
+                        if (Array.isArray(element))
+                            element = element.map(item => genFilterCriteria(item, resource));
+                        else
+                            element = genFilterCriteria(element, resource);
+                    }
                 } else {
                     entityField = "data." + entityField;
+                }
+                // special case to provide wildcard searches
+                if (typeof element === 'string' && element.startsWith("$regex:")) {
+                    element = { '$regex': element.split(':')[1] };
                 }
                 filterCriteria[entityField] = element;
             }
         }
+
         return filterCriteria;
     }
-
     function processCreateReply(result, resolve, reject) {
         if (result.status === 200) {
             const raEntity = entityToRaEntity(result.data);
@@ -175,15 +190,15 @@ export default (bc, indexedIdResources = [], verbose = false) => {
     return (type, resource, params) => {
         var mode = 'global';
         var service = globalService;
-        
+
         if (resource.endsWith('@user')) {
             mode = 'user';
-            resource = resource.substring(0,resource.lastIndexOf('@') );
+            resource = resource.substring(0, resource.lastIndexOf('@'));
             service = userService;
         }
         if (resource.endsWith('@global')) {
             mode = 'global';
-            resource = resource.substring(0,resource.lastIndexOf('@') );
+            resource = resource.substring(0, resource.lastIndexOf('@'));
             service = globalService;
         }
         if (verbose) console.log("===> bcDataProvider: %s for %s", type, resource);
@@ -207,7 +222,7 @@ export default (bc, indexedIdResources = [], verbose = false) => {
                         },
                         "searchCriteria": {
                             "entityType": resource,
-                            ...genFilterCriteria(params, resource)
+                            ...genFilterCriteria(params.filter, resource)
                         },
                         "sortCriteria": genSortCriteria(params, resource)
                     };
@@ -308,7 +323,7 @@ export default (bc, indexedIdResources = [], verbose = false) => {
                     var entity = dataToEntity(data);
                     service.deleteEntity(id, entity.version, result => {
                         if (result.status === 200) {
-                            resolve({data});
+                            resolve({ data });
                         } else {
                             reject({
                                 STATUSCODE: result.status,
