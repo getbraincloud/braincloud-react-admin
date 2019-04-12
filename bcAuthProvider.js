@@ -55,7 +55,7 @@ export default (bc, roleAttribute = "react-admin-role", verbose = false) => {
         }
         if (type === AUTH_ERROR) {
             const status = params.status;
-            if (verbose) console.log("---> Checking for AUTH_ERROR: %d", status);
+            if (verbose) console.log("---> Checking for AUTH_ERROR: ", status);
             if (status === 401 || status === 403) {
                 _hasLoggedin = false;
 
