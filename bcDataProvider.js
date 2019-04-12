@@ -233,47 +233,30 @@ export default (bc, indexedIdResources = [], verbose = false) => {
                 });
             case GET_ONE:
                 return new Promise(function (resolve, reject) {
-                    // TODO: Once brainCloud accept filter/sort on entityId this can be updated to only use the getList api.
+                    const id = params.id;
+                    var where = { "entityType": resource, "entityId": id };
                     if (indexedIdResources.includes(resource)) {
-                        const id = params.id;
-                        var where = { "entityType": resource, "entityIndexedId": id };
-                        service.getList(where, {}, 1, result => {
-                            if (verbose) console.log("==> %s got response for %s with status %d", type, id, result.status);
-                            if (result.status === 200) {
-                                if (result.data.entityList && result.data.entityList.length > 0) {
-                                    const raEntity = entityToRaEntity(result.data.entityList[0]);
-                                    resolve({
-                                        data: raEntity
-                                    });
-                                } else {
-                                    resolve({ data: {} });
-                                }
-                            } else {
-                                reject({
-                                    STATUSCODE: result.status,
-                                    status: result.status,
-                                    message: result.status_message
-                                });
-                            };
-                        });
-                    } else {
-                        const id = params.id;
-                        service.read(id, result => {
-                            if (verbose) console.log("==> %s got response for %s with status %d", type, id, result.status);
-                            if (result.status === 200) {
-                                const raEntity = entityToRaEntity(result.data);
+                        where = { "entityType": resource, "entityIndexedId": id };
+                    }
+                    service.getList(where, {}, 1, result => {
+                        if (verbose) console.log("==> %s got response for %s with status %d", type, id, result.status);
+                        if (result.status === 200) {
+                            if (result.data.entityList && result.data.entityList.length > 0) {
+                                const raEntity = entityToRaEntity(result.data.entityList[0]);
                                 resolve({
                                     data: raEntity
                                 });
                             } else {
-                                reject({
-                                    STATUSCODE: result.status,
-                                    status: result.status,
-                                    message: result.status_message
-                                });
-                            };
-                        });
-                    }
+                                resolve({ data: {} });
+                            }
+                        } else {
+                            reject({
+                                STATUSCODE: result.status,
+                                status: result.status,
+                                message: result.status_message
+                            });
+                        };
+                    });
                 });
             case CREATE:
                 return new Promise(function (resolve, reject) {
@@ -339,13 +322,24 @@ export default (bc, indexedIdResources = [], verbose = false) => {
                 return new Promise(function (resolve, reject) {
                     var where = {
                         "entityType": resource,
-                        "entityIndexedId": {
+                        "entityId": {
                             "$in": params.ids
                         }
                     };
                     var orderBy = {
-                        "entityIndexedId": 1
+                        "entityId": 1
                     };
+                    if (indexedIdResources.includes(resource)) {
+                        var where = {
+                            "entityType": resource,
+                            "entityIndexedId": {
+                                "$in": params.ids
+                            }
+                        };
+                        var orderBy = {
+                            "entityIndexedId": 1
+                        };
+                    }
                     var maxReturn = params.ids.length;
 
                     if (verbose) console.log("==> %s: with %s", type, JSON.stringify(where));
