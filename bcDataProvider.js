@@ -426,9 +426,21 @@ export default (bc, indexedIdResources = [], verbose = false) => {
                     // url = `${apiUrl}/${resource}?${stringify(query)}`;
                     break;
                 }
+            case 'RUN_SCRIPT':
+                return new Promise(function (resolve, reject) {
+                    _bc.script.runScript(resource, params, result => {
+                        if (verbose) console.log(status + " : " + JSON.stringify(result, null, 2));
+                        var status = result.status;
+                        if (status == 200) {
+                            resolve(result);
+                        } else {
+                            reject(result);
+                        }
+                    });                
+                });
             default:
-                throw new Error(`Unsupported Data Provider request type ${type}`);
-        }
+        throw new Error(`Unsupported Data Provider request type ${type}`);
+    }
 
-    };
+};
 };

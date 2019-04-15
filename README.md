@@ -39,6 +39,7 @@ npm install braincloud-react-admin
 
 - Global Entities
 - User Entities 
+- Running Cloud Scripts
 - Custom Permissions
 
 ### Global Entities
@@ -57,6 +58,22 @@ To make as resourse use user's entities add the suffix `@user` to the resource n
 
 It is recommented to add the `options` proprerty with a label to the definition, else the `@user` suffix will show in the menu.
 
+### Running Cloud Scripts
+
+It is possible to run Cloud Script using a Special Action Type of `RUN_SCRIPT` and providing the name of the script as the resource name. 
+
+``` javascript
+dataProvider('RUN_SCRIPT', 'EchoScript', { data: "World" })
+            .then((result) => {
+                console.log(result);
+                dispatch(showNotification('Response: ' + result.data.response.data))
+            })
+            .catch((e) => {
+                console.warn(e);
+                dispatch(showNotification('Error: running script', 'warning'))
+            });
+```
+
 ### Custom Permission
 
 To use custom permissions you must add the key used to define the permission to the `bcAuthProvider` call.
@@ -69,7 +86,7 @@ const authProvider = bcReactAdmin.bcAuthProvider(_bc,"react-admin-role",verboseM
 Then in brainCloud add a user attribute of the same name (`react-admin-role` in this example) to each user and set the value to the chosen role for that user.
 See React-Admin documentation at https://marmelab.com/react-admin/Authorization.html
 
-## Usage
+## Sample Usage
 
 App.js
 
