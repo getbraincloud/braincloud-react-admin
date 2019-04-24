@@ -1,6 +1,6 @@
 {
   "name": "braincloud-react-admin",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Data Provider for react-admin framework. Allow access to Global Entitie",
   "main": "index.js",
   "scripts": {
