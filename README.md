@@ -2,7 +2,7 @@
 
 Thanks for downloading the brainCloud-react-admin dataProvider library! Here are a few notes to get you started. 
 
-This module will help you quickly create admin portal to administer global entities from your brainCloud application.
+This module will help you quickly create admin portal to administer global entities for your brainCloud application.
 
 You can use it for viewing, charting, editing, your global entities. 
 
@@ -41,6 +41,7 @@ npm install braincloud-react-admin
 - User Entities 
 - Running Cloud Scripts
 - Custom Permissions
+- Support Multiple authentication methods (Email, Google, Facebook, ...)
 
 ### Global Entities
 
@@ -85,6 +86,24 @@ const authProvider = bcReactAdmin.bcAuthProvider(_bc,"react-admin-role",verboseM
 
 Then in brainCloud add a user attribute of the same name (`react-admin-role` in this example) to each user and set the value to the chosen role for that user.
 See React-Admin documentation at https://marmelab.com/react-admin/Authorization.html
+
+## Authentication
+
+The default authentication method use is Email/Passwords, to use a different method you must create a custom login form or a saga that will augment the parameters passed to the LOGIN action with;
+
+``` javascript
+{
+    username:"...",
+    password:"...",
+    mode:"External",
+    externalName:"YourExterenalConfigName",
+}
+```
+Where mode can be on of 'EmailPassword', 'External', 'Universal'
+
+If Using 'External' you must also provide the config name of the external integration as defined in brainCloud. Set the property 'externalName' to the name of the config.
+
+See https://marmelab.com/react-admin/Authentication.html#customizing-the-login-and-logout-components to learn how to customize the Login page to allow sending the needed extra parameters.
 
 ## Sample Usage
 

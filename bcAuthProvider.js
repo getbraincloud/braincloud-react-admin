@@ -30,17 +30,37 @@ export default (bc, roleAttribute = "react-admin-role", verbose = false) => {
 
     return (type, params) => {
         if (verbose) console.log("---> bcAuthProvider: %s", type);
-
         if (type === AUTH_LOGIN) {
             const {
                 username,
-                password
+                password,
+                mode,
+                externalName,
             } = params;
+
+            if (mode === 'External' && typeof externalName === 'undefined') return Promise.reject({ status: 500, message: "Missing externalName parameter" });
             if (verbose) console.log("---> Login", params);
             return new Promise(function (resolve, reject) {
-                _bc.authenticateEmailPassword(username, password, false, result => {
-                    validateLogin(result, resolve, reject);
-                });
+                switch (mode) {
+                    case undefined:
+                    case 'EmailPassword':
+                        _bc.authenticateEmailPassword(username, password, false, result => {
+                            validateLogin(result, resolve, reject);
+                        });
+                        break;
+                    case 'External':
+                        _bc.authenticateExternal(username, password, externalName, true, result => {
+                            validateLogin(result, resolve, reject);
+                        });
+                        break;
+                    case 'Universal':
+                        _bc.authenticateUniversal(username, password, false, result => {
+                            validateLogin(result, resolve, reject);
+                        });
+                        break;
+                    default:
+                        break;
+                }
             });
         }
         if (type === AUTH_LOGOUT) {
@@ -63,7 +83,7 @@ export default (bc, roleAttribute = "react-admin-role", verbose = false) => {
             return Promise.resolve();
         }
         if (type === AUTH_CHECK) {
-            const hasSessionId = _bc.brainCloudClient.isAuthenticated() ||_bc.getSessionId() !== null;
+            const hasSessionId = _bc.brainCloudClient.isAuthenticated() || _bc.getSessionId() !== null;
             if (_hasLoggedin && hasSessionId) {
                 if (verbose) console.log("---> Already logged-in and authenticated");
                 return Promise.resolve()
@@ -81,7 +101,7 @@ export default (bc, roleAttribute = "react-admin-role", verbose = false) => {
             }
         }
         if (type === AUTH_GET_PERMISSIONS) {
-            const hasSessionId = _bc.brainCloudClient.isAuthenticated() ||_bc.getSessionId() !== null;
+            const hasSessionId = _bc.brainCloudClient.isAuthenticated() || _bc.getSessionId() !== null;
             if (hasSessionId) {
                 _currentPermission = localStorage.getItem(_bc.wrapperName + ".permission");
                 if (verbose) console.log("---> Getting permissions ", _currentPermission);
