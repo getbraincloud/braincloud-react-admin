@@ -41,7 +41,7 @@ npm install braincloud-react-admin
 - User Entities 
 - Running Cloud Scripts
 - Custom Permissions
-- Support Multiple authentication methods (Email, Google, Facebook, ...)
+- Support Multiple authentication methods (Email, Universal, External)
 
 ### Global Entities
 

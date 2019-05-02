@@ -1,6 +1,6 @@
 {
   "name": "braincloud-react-admin",
-  "version": "1.2.3",
+  "version": "1.2.4",
   "description": "Data Provider for react-admin framework. Allow access to Global Entitie",
   "main": "index.js",
   "scripts": {
@@ -14,11 +14,17 @@
   "license": "ISC",
   "bundleDependencies": false,
   "dependencies": {
-    "braincloud": "^3.10.0",
-    "react": "^16.7.0",
-    "react-admin": "^2.6.2",
-    "react-dom": "^16.7.0"
+    "braincloud": "^3.11.1",
+    "react": "^16.8.6",
+    "react-admin": "^2.9.0",
+    "react-dom": "^16.8.6"
   },
+  "files": [
+    "README.md",
+    "bcAuthProvider.js",
+    "bcDataProvider.js",
+    "index.js"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/getbraincloud/braincloud-react-admin.git"
