@@ -210,11 +210,6 @@ export default (bc, indexedIdResources = [], verbose = false) => {
                         page,
                         perPage
                     } = params.pagination;
-                    // TODO: Support for paging, and Sorting.
-                    console.log("%%%%%%%%%%%%%%%%%%%");
-                    console.log("for " + resource);
-                    console.log(params);
-                    console.log("%%%%%%%%%%%%%%%%%%%");
                     var context = {
                         "pagination": {
                             "rowsPerPage": perPage,
@@ -226,7 +221,7 @@ export default (bc, indexedIdResources = [], verbose = false) => {
                         },
                         "sortCriteria": genSortCriteria(params, resource)
                     };
-                    // context.sortCriteria[params.sort.field] = params.sort.order === "ASC" ? 1 : -1;
+
                     if (verbose) console.log("==> %s: with %s", type, JSON.stringify(context));
                     service.getPage(context, result => {
                         if (verbose) console.log("==> %s got response with status %d", type, result.status);
@@ -407,25 +402,44 @@ export default (bc, indexedIdResources = [], verbose = false) => {
                     break;
                 }
             case GET_MANY_REFERENCE:
-                {
-                    if (verbose) console.log("!!> %s: NOT YET SUPPORTED params: %s ", type, JSON.stringify(params));
-                    //TODO: Implement GET_MANY_REFERENCE
-                    // const { page, perPage } = params.pagination;
-                    // const { field, order } = params.sort;
-                    // const query = {
-                    //     sort: JSON.stringify([field, order]),
-                    //     range: JSON.stringify([
-                    //         (page - 1) * perPage,
-                    //         page * perPage - 1,
-                    //     ]),
-                    //     filter: JSON.stringify({
-                    //         ...params.filter,
-                    //         [params.target]: params.id,
-                    //     }),
-                    // };
-                    // url = `${apiUrl}/${resource}?${stringify(query)}`;
-                    break;
-                }
+                return new Promise(function (resolve, reject) {
+                    const {
+                        page,
+                        perPage
+                    } = params.pagination;
+
+                    var context = {
+                        "pagination": {
+                            "rowsPerPage": perPage,
+                            "pageNumber": page
+                        },
+                        "searchCriteria": {
+                            "entityType": resource                            
+                        },
+                        "sortCriteria": genSortCriteria(params, resource)
+                    };
+                    context.searchCriteria["data." + params.target] = params.id;
+                    
+                    if (verbose) console.log("==> %s: with %s", type, JSON.stringify(context));
+                    service.getPage(context, result => {
+                        if (verbose) console.log("==> %s got response with status %d", type, result.status);
+                        if (result.status === 200) {
+                            const data = {
+                                data: entitiesToData(result.data.results.items),
+                                total: result.data.results.count
+                            };
+                            if (verbose) console.log("==> Data: ", data);
+                            resolve(data);
+                        } else {
+                            reject({
+                                STATUSCODE: result.status,
+                                status: result.status,
+                                message: result.status_message
+                            });
+                        };
+                    });
+
+                });
             case 'RUN_SCRIPT':
                 return new Promise(function (resolve, reject) {
                     _bc.script.runScript(resource, params, result => {
@@ -436,11 +450,11 @@ export default (bc, indexedIdResources = [], verbose = false) => {
                         } else {
                             reject(result);
                         }
-                    });                
+                    });
                 });
             default:
-        throw new Error(`Unsupported Data Provider request type ${type}`);
-    }
+                throw new Error(`Unsupported Data Provider request type ${type}`);
+        }
 
-};
+    };
 };
