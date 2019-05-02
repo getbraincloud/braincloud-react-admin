@@ -154,7 +154,7 @@ export default (bc, indexedIdResources = [], verbose = false) => {
                 }
                 // special case to provide wildcard searches
                 if (typeof element === 'string' && element.startsWith("$regex:")) {
-                    element = { '$regex': element.split(':')[1] };
+                    element = { '$regex': element.split(':')[1],'$options':'i' };
                 }
                 filterCriteria[entityField] = element;
             }
